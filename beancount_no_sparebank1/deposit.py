@@ -1,32 +1,54 @@
+from beangulp.importers import csvbase
 import csv
 import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import List, Optional, Sequence, Tuple
+from typing import Optional, Sequence, Tuple, Dict, Any, List
 
-import beangulp
 from beancount.core import data
 from beancount.core.amount import Amount
-from beancount.core.number import D
-from beangulp import mimetypes
 from beangulp import extract, similar
 
 
-class DepositAccountImporter(beangulp.Importer):
-    """Importer for SpareBank 1 deposit account CSV statements.
+class SpareBank1Importer(csvbase.Importer):
+    """Importer for SpareBank 1 deposit account CSV statements using csvbase.
 
     This importer handles CSV statements from SpareBank 1 in Norway.
     It correctly processes Norwegian date and decimal formats, and categorizes
     transactions based on their descriptions.
     """
 
-    def __init__(
-        self,
-        account_name: str,
-        currency: str = "NOK",
-        categorization_rules: Optional[Sequence[Tuple[str, str]]] = None,
-        flag: str = "*",
-    ):
+    # Define a custom dialect for Norwegian CSV format
+    class NorwegianDialect(csv.Dialect):
+        delimiter = ';'
+        quotechar = '"'
+        doublequote = True
+        skipinitialspace = True
+        lineterminator = '\r\n'
+        quoting = csv.QUOTE_MINIMAL
+
+    # Configure csvbase options
+    dialect = NorwegianDialect
+    encoding = 'utf-8-sig'  # Handle BOM if present
+
+    # CSV file has a header line
+    names = True
+
+    # Configure column mappings
+    date = csvbase.Date('Dato', '%d.%m.%Y')  # Norwegian date format
+    narration = csvbase.Column('Beskrivelse')
+
+    # Handle both Inn (credit) and Ut (debit) columns, convert comma to period
+    amount = csvbase.CreditOrDebit('Inn', 'Ut', subs={',': '.'})
+
+    # Map the metadata fields
+    rentedato = csvbase.Column('Rentedato')
+    til_konto = csvbase.Column('Til konto')
+    fra_konto = csvbase.Column('Fra konto')
+
+    def __init__(self, account_name: str, currency: str = "NOK",
+                 categorization_rules: Optional[Sequence[Tuple[str, str]]] = None,
+                 flag: str = "*"):
         """Initialize a SpareBank 1 importer.
 
         Args:
@@ -36,70 +58,23 @@ class DepositAccountImporter(beangulp.Importer):
                 Example: [('GITHUB', 'Expenses:Services:Github'), ('Fedex', 'Expenses:Shipping')]
             flag: The flag to use for transactions (default: *).
         """
-        self.account_name = account_name
-        self.currency = currency
         self.categorization_rules = categorization_rules or []
-        self.flag = flag
+        super().__init__(account_name, currency, flag=flag)
 
     def identify(self, filepath: str) -> bool:
-        """Identify if the file is a SpareBank 1 CSV statement.
-
-        Args:
-            filepath: The path to the file.
-
-        Returns:
-            True if this file is a SpareBank 1 CSV statement.
-        """
-        mimetype, encoding = mimetypes.guess_type(filepath)
-        if mimetype != "text/csv":
+        """Identify if the file is a SpareBank 1 CSV statement."""
+        try:
+            with open(filepath, encoding=self.encoding) as fd:
+                header_line = fd.readline().strip()
+                return header_line == "Dato;Beskrivelse;Rentedato;Inn;Ut;Til konto;Fra konto;"
+        except:
             return False
 
-        # Check for the characteristic header
-        with open(filepath, "r", encoding="utf-8-sig") as file:
-            header = file.readline().strip()
-            expected_header = "Dato;Beskrivelse;Rentedato;Inn;Ut;Til konto;Fra konto;"
-            return header == expected_header
-
-    def account(self, filepath: str) -> str:
-        """Return the account for the given file.
-
-        Args:
-            filepath: The path to the file.
-
-        Returns:
-            The account name.
-        """
-        return self.account_name
-
     def filename(self, filepath: str) -> str:
-        """Generate a meaningful filename.
-
-        Args:
-            filepath: The path to the file.
-
-        Returns:
-            A meaningful filename.
-        """
+        """Generate a meaningful filename."""
         return f"sparebank1.{Path(filepath).name}"
 
-    def date(self, filepath: str) -> Optional[datetime.date]:
-        """Extract the statement date.
-
-        Args:
-            filepath: The path to the file.
-
-        Returns:
-            The most recent transaction date.
-        """
-        # Try to get the most recent transaction date
-        entries = self.extract(filepath, [])
-        if entries:
-            return max(
-                entry.date for entry in entries if isinstance(entry, data.Transaction)
-            )
-        return None
-
-    def deduplicate(self, entries, existing):
+    def deduplicate(self, entries: List[data.Directive], existing: List[data.Directive]) -> None:
         """Mark duplicate entries.
 
         Args:
@@ -115,122 +90,31 @@ class DepositAccountImporter(beangulp.Importer):
             epsilon=Decimal("0.05"),  # 5% tolerance for amount differences
         )
 
-        # Mark duplicates using the function from beangulp.extract (not similar)
+        # Mark duplicates using the function from beangulp.extract
         extract.mark_duplicate_entries(entries, existing, window, comparator)
 
-    def _parse_amount(self, amount_str: str) -> Decimal:
-        """Parse a Norwegian formatted amount.
+    def metadata(self, filepath: str, lineno: int, row: Any) -> Dict[str, Any]:
+        """Build transaction metadata dictionary."""
+        meta = super().metadata(filepath, lineno, row)
 
-        Args:
-            amount_str: The amount string.
+        # Add additional metadata if available
+        if hasattr(row, 'rentedato') and row.rentedato:
+            meta["rentedato"] = row.rentedato
+        if hasattr(row, 'til_konto') and row.til_konto:
+            meta["to_account"] = row.til_konto
+        if hasattr(row, 'fra_konto') and row.fra_konto:
+            meta["from_account"] = row.fra_konto
 
-        Returns:
-            The decimal amount.
-        """
-        if not amount_str:
-            return D("0")
-        # Remove quotes and convert Norwegian decimal format to standard
-        clean_str = amount_str.strip('"').replace(".", "").replace(",", ".")
-        return D(clean_str)
+        return meta
 
-    def extract(
-        self, filepath: str, existing_entries: List[data.Directive]
-    ) -> List[data.Directive]:
-        """Extract transactions from a SpareBank 1 CSV file."""
-        entries = []
-
-        # Open the CSV file with proper encoding and delimiter
-        with open(filepath, "r", encoding="utf-8") as file:
-            # Skip the header line
-            next(file)
-
-            # Create a CSV reader with semicolon delimiter
-            reader = csv.reader(file, delimiter=";")
-
-            for index, row in enumerate(reader, 1):
-                # Skip empty rows
-                if not row or not row[0]:
-                    continue
-
-                # Parse the data from the row
-                date_str, description, rentedato, inn, ut, til_konto, fra_konto, _ = row
-
-                date = datetime.datetime.strptime(
-                    date_str.strip('"'), "%d.%m.%Y"
-                ).date()
-
-                # Parse the description - use it directly as narration
-                narration = description.strip('"')
-
-                # Parse both incoming and outgoing amounts
-                inn_decimal = self._parse_amount(inn)
-                ut_decimal = self._parse_amount(ut)
-
-                # Use inn if present and non-zero, otherwise use ut (with its original sign)
-                amount_decimal = inn_decimal if inn_decimal != D("0") else ut_decimal
-
-                # Create metadata
-                meta = data.new_metadata(filepath, index)
-
-                # Add additional metadata if available
-                if til_konto:
-                    meta["to_account"] = til_konto.strip('"')
-                if fra_konto:
-                    meta["from_account"] = fra_konto.strip('"')
-                if rentedato:
-                    meta["rentedato"] = rentedato.strip('"')
-
-                # Create the transaction
-                amount_obj = Amount(amount_decimal, self.currency)
-                posting = data.Posting(
-                    self.account_name, amount_obj, None, None, None, None
-                )
-
-                transaction = data.Transaction(
-                    meta=meta,
-                    date=date,
-                    flag=self.flag,
-                    payee=None,  # No payee extraction
-                    narration=narration,
-                    tags=set(),
-                    links=set(),
-                    postings=[posting],
-                )
-
-                # Create the row dictionary for the finalize method
-                row_dict = {
-                    "Dato": date_str,
-                    "Beskrivelse": description,
-                    "Rentedato": rentedato,
-                    "Inn": inn,
-                    "Ut": ut,
-                    "Til konto": til_konto,
-                    "Fra konto": fra_konto,
-                }
-
-                # Apply categorization via finalize method
-                transaction = self.finalize(transaction, row_dict)
-
-                entries.append(transaction)
-
-        return entries
-
-    def finalize(self, txn, row_dict):
-        """Post-process the transaction with categorization.
-
-        Args:
-            txn: The transaction to categorize
-            row_dict: Dictionary containing row data
-
-        Returns:
-            The categorized transaction
-        """
+    def finalize(self, txn: data.Transaction, row: Any) -> Optional[data.Transaction]:
+        """Post-process the transaction with categorization."""
         # If no categorization rules, return transaction unchanged
         if not self.categorization_rules:
             return txn
 
-        # Get the description from the row dictionary
-        description = row_dict.get("Beskrivelse", "")
+        # Get the description from the transaction narration
+        description = txn.narration
 
         # Apply first matching categorization rule
         for pattern, account in self.categorization_rules:
