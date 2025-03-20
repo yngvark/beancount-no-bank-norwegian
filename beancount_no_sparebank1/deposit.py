@@ -10,7 +10,7 @@ from beancount.core.amount import Amount
 from beangulp import extract, similar
 
 
-class SpareBank1Importer(Importer):
+class DepositAccountImporter(Importer):
     """Importer for SpareBank 1 deposit account CSV statements using csvbase.
 
     This importer handles CSV statements from SpareBank 1 in Norway.
