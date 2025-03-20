@@ -1,4 +1,4 @@
-from beangulp.importers import csvbase
+from beangulp.importers.csvbase import Importer, Column, Date, CreditOrDebit
 import csv
 import datetime
 from decimal import Decimal
@@ -10,7 +10,7 @@ from beancount.core.amount import Amount
 from beangulp import extract, similar
 
 
-class SpareBank1Importer(csvbase.Importer):
+class SpareBank1Importer(Importer):
     """Importer for SpareBank 1 deposit account CSV statements using csvbase.
 
     This importer handles CSV statements from SpareBank 1 in Norway.
@@ -35,29 +35,21 @@ class SpareBank1Importer(csvbase.Importer):
     names = True
 
     # Configure column mappings
-    date = csvbase.Date('Dato', '%d.%m.%Y')  # Norwegian date format
-    narration = csvbase.Column('Beskrivelse')
+    date = Date('Dato', '%d.%m.%Y')  # Norwegian date format
+    narration = Column('Beskrivelse')
 
     # Handle both Inn (credit) and Ut (debit) columns, convert comma to period
-    amount = csvbase.CreditOrDebit('Inn', 'Ut', subs={',': '.'})
+    amount = CreditOrDebit('Inn', 'Ut', subs={',': '.'})
 
     # Map the metadata fields
-    rentedato = csvbase.Column('Rentedato')
-    til_konto = csvbase.Column('Til konto')
-    fra_konto = csvbase.Column('Fra konto')
+    rentedato = Column('Rentedato')
+    til_konto = Column('Til konto')
+    fra_konto = Column('Fra konto')
 
     def __init__(self, account_name: str, currency: str = "NOK",
                  categorization_rules: Optional[Sequence[Tuple[str, str]]] = None,
                  flag: str = "*"):
-        """Initialize a SpareBank 1 importer.
-
-        Args:
-            account_name: The account to import into (e.g. 'Assets:Bank:SpareBank1:Checking').
-            currency: The currency of the account (default: NOK).
-            categorization_rules: Optional list of (pattern, account) tuples for automatic categorization.
-                Example: [('GITHUB', 'Expenses:Services:Github'), ('Fedex', 'Expenses:Shipping')]
-            flag: The flag to use for transactions (default: *).
-        """
+        """Initialize a SpareBank 1 importer."""
         self.categorization_rules = categorization_rules or []
         super().__init__(account_name, currency, flag=flag)
 
@@ -75,12 +67,7 @@ class SpareBank1Importer(csvbase.Importer):
         return f"sparebank1.{Path(filepath).name}"
 
     def deduplicate(self, entries: List[data.Directive], existing: List[data.Directive]) -> None:
-        """Mark duplicate entries.
-
-        Args:
-            entries: List of entries extracted from the current file
-            existing: List of existing entries from the ledger
-        """
+        """Mark duplicate entries."""
         # Define a window of days to look for duplicates
         window = datetime.timedelta(days=3)
 
