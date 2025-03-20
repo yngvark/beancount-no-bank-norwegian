@@ -9,6 +9,7 @@ from beancount.core import data
 from beancount.core.amount import Amount
 from beancount.core.number import D
 from beangulp import mimetypes
+from beangulp import similar
 
 from .deposit_categorizer import DepositCategorizer
 
@@ -99,6 +100,25 @@ class DepositAccountImporter(beangulp.Importer):
                 entry.date for entry in entries if isinstance(entry, data.Transaction)
             )
         return None
+
+    def deduplicate(self, entries, existing):
+        """Mark duplicate entries.
+
+        Args:
+            entries: List of entries extracted from the current file
+            existing: List of existing entries from the ledger
+        """
+        # Define a window of days to look for duplicates
+        window = datetime.timedelta(days=3)
+
+        # Create the comparator directly with desired settings
+        comparator = similar.heuristic_comparator(
+            max_date_delta=datetime.timedelta(days=2),  # Tolerance for date differences
+            epsilon=Decimal("0.05")                     # 5% tolerance for amount differences
+        )
+
+        # Mark duplicates using Beangulp's built-in function
+        similar.mark_duplicate_entries(entries, existing, window, comparator)
 
     def _parse_amount(self, amount_str: str) -> Decimal:
         """Parse a Norwegian formatted amount.
