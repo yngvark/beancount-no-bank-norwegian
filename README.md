@@ -1,16 +1,22 @@
 # beancount-no-sparebank1
 
 ``` python
-import beancount_sparebank1
+import beangulp
+import beancount_no_sparebank1
 
-CONFIG = [
-    beancount_sparebank1.DepositAccountImporter(
-        'Assets:Bank:SpareBank1:Checking',
+importers = [
+    beancount_no_sparebank1.deposit.DepositAccountImporter(
+        'Assets:Checking',
         currency='NOK',
         categorization_rules=[
             ('GITHUB', 'Expenses:Cloud-Services:Source-Hosting:Github'),
             ('Fedex', 'Expenses:Postage:FedEx'),
+            ('FREMTIND', 'Expenses:Insurance'),
         ]
     ),
 ]
+
+if __name__ == '__main__':
+    ingest = beangulp.Ingest(importers)
+    ingest()
 ```
