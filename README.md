@@ -1,0 +1,1 @@
+# beancount-no-sparebank1
