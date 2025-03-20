@@ -9,7 +9,7 @@ from beancount.core import data
 from beancount.core.amount import Amount
 from beancount.core.number import D
 from beangulp import mimetypes
-from beangulp import similar
+from beangulp import extract, similar
 
 from .deposit_categorizer import DepositCategorizer
 
@@ -117,8 +117,8 @@ class DepositAccountImporter(beangulp.Importer):
             epsilon=Decimal("0.05")                     # 5% tolerance for amount differences
         )
 
-        # Mark duplicates using Beangulp's built-in function
-        similar.mark_duplicate_entries(entries, existing, window, comparator)
+        # Mark duplicates using the function from beangulp.extract (not similar)
+        extract.mark_duplicate_entries(entries, existing, window, comparator)
 
     def _parse_amount(self, amount_str: str) -> Decimal:
         """Parse a Norwegian formatted amount.
