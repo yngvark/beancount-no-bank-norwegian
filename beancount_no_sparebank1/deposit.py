@@ -112,7 +112,7 @@ class DepositAccountImporter(beangulp.Importer):
         # Create the comparator directly with desired settings
         comparator = similar.heuristic_comparator(
             max_date_delta=datetime.timedelta(days=2),  # Tolerance for date differences
-            epsilon=Decimal("0.05")                     # 5% tolerance for amount differences
+            epsilon=Decimal("0.05"),  # 5% tolerance for amount differences
         )
 
         # Mark duplicates using the function from beangulp.extract (not similar)
@@ -182,7 +182,9 @@ class DepositAccountImporter(beangulp.Importer):
 
                 # Create the transaction
                 amount_obj = Amount(amount_decimal, self.currency)
-                posting = data.Posting(self.account_name, amount_obj, None, None, None, None)
+                posting = data.Posting(
+                    self.account_name, amount_obj, None, None, None, None
+                )
 
                 transaction = data.Transaction(
                     meta=meta,
