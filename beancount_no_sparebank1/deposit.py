@@ -11,8 +11,6 @@ from beancount.core.number import D
 from beangulp import mimetypes
 from beangulp import extract, similar
 
-from .deposit_categorizer import DepositCategorizer
-
 
 class DepositAccountImporter(beangulp.Importer):
     """Importer for SpareBank 1 deposit account CSV statements.
@@ -40,7 +38,7 @@ class DepositAccountImporter(beangulp.Importer):
         """
         self.account_name = account_name
         self.currency = currency
-        self.categorizer = DepositCategorizer(categorization_rules) if categorization_rules else None
+        self.categorization_rules = categorization_rules or []
         self.flag = flag
 
     def identify(self, filepath: str) -> bool:
@@ -138,15 +136,7 @@ class DepositAccountImporter(beangulp.Importer):
     def extract(
         self, filepath: str, existing_entries: List[data.Directive]
     ) -> List[data.Directive]:
-        """Extract transactions from a SpareBank 1 CSV file.
-
-        Args:
-            filepath: The path to the CSV file.
-            existing_entries: Existing entries to prevent duplicates.
-
-        Returns:
-            A list of beancount directives.
-        """
+        """Extract transactions from a SpareBank 1 CSV file."""
         entries = []
 
         # Open the CSV file with proper encoding and delimiter
@@ -205,20 +195,52 @@ class DepositAccountImporter(beangulp.Importer):
                     postings=[posting],
                 )
 
-                # Apply the categorizer if provided
-                if self.categorizer:
-                    row_dict = {
-                        "Dato": date_str,
-                        "Beskrivelse": description,
-                        "Rentedato": rentedato,
-                        "Inn": inn,
-                        "Ut": ut,
-                        "Til konto": til_konto,
-                        "Fra konto": fra_konto,
-                    }
-                    transaction = self.categorizer.categorize(transaction, row_dict)
+                # Create the row dictionary for the finalize method
+                row_dict = {
+                    "Dato": date_str,
+                    "Beskrivelse": description,
+                    "Rentedato": rentedato,
+                    "Inn": inn,
+                    "Ut": ut,
+                    "Til konto": til_konto,
+                    "Fra konto": fra_konto,
+                }
+
+                # Apply categorization via finalize method
+                transaction = self.finalize(transaction, row_dict)
 
                 entries.append(transaction)
 
         return entries
 
+    def finalize(self, txn, row_dict):
+        """Post-process the transaction with categorization.
+
+        Args:
+            txn: The transaction to categorize
+            row_dict: Dictionary containing row data
+
+        Returns:
+            The categorized transaction
+        """
+        # If no categorization rules, return transaction unchanged
+        if not self.categorization_rules:
+            return txn
+
+        # Get the description from the row dictionary
+        description = row_dict.get("Beskrivelse", "")
+
+        # Apply first matching categorization rule
+        for pattern, account in self.categorization_rules:
+            if pattern in description:
+                # Create a balancing posting with the opposite amount
+                opposite_units = Amount(-txn.postings[0].units.number, self.currency)
+                balancing_posting = data.Posting(
+                    account, opposite_units, None, None, None, None
+                )
+
+                # Add the new posting to the transaction
+                txn = txn._replace(postings=txn.postings + [balancing_posting])
+                break
+
+        return txn
