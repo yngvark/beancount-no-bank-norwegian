@@ -85,15 +85,11 @@ class DepositAccountImporter(Importer):
         """Build transaction metadata dictionary."""
         meta = super().metadata(filepath, lineno, row)
 
-        # Add additional metadata if available
-        if hasattr(row, 'rentedato') and row.rentedato:
-            meta["rentedato"] = row.rentedato
-        if hasattr(row, 'til_konto') and row.til_konto:
-            meta["to_account"] = row.til_konto
-        if hasattr(row, 'fra_konto') and row.fra_konto:
-            meta["from_account"] = row.fra_konto
-
-        return meta
+        meta["rentedato"] = getattr(row, 'rentedato', None)
+        meta["to_account"] = getattr(row, 'til_konto', None)
+        meta["from_account"] = getattr(row, 'fra_konto', None)
+        # Filter out None values to keep metadata clean
+        return {k: v for k, v in meta.items() if v is not None}
 
     def finalize(self, txn: data.Transaction, row: Any) -> Optional[data.Transaction]:
         """Post-process the transaction with categorization."""
