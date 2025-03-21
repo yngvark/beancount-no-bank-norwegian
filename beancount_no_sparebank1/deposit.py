@@ -47,10 +47,10 @@ class DepositAccountImporter(Importer):
     fra_konto = Column('Fra konto')
 
     def __init__(self, account_name: str, currency: str = "NOK",
-                 categorization_rules: Optional[Sequence[Tuple[str, str]]] = None,
+                 narration_to_account_mappings: Optional[Sequence[Tuple[str, str]]] = None,
                  flag: str = "*"):
         """Initialize a SpareBank 1 importer."""
-        self.categorization_rules = categorization_rules or []
+        self.narration_to_account_mappings = narration_to_account_mappings or []
         super().__init__(account_name, currency, flag=flag)
 
     def identify(self, filepath: str) -> bool:
@@ -98,14 +98,14 @@ class DepositAccountImporter(Importer):
     def finalize(self, txn: data.Transaction, row: Any) -> Optional[data.Transaction]:
         """Post-process the transaction with categorization."""
         # If no categorization rules, return transaction unchanged
-        if not self.categorization_rules:
+        if not self.narration_to_account_mappings:
             return txn
 
         # Get the description from the transaction narration
         description = txn.narration
 
         # Apply first matching categorization rule
-        for pattern, account in self.categorization_rules:
+        for pattern, account in self.narration_to_account_mappings:
             if pattern in description:
                 # Create a balancing posting with the opposite amount
                 opposite_units = Amount(-txn.postings[0].units.number, self.currency)
