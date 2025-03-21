@@ -9,14 +9,9 @@ from beancount.core import data
 from beancount.core.amount import Amount
 from beangulp import extract, similar, utils
 
+DIALECT_NAME = "sparebank1"
 
-class CsvDialect(csv.Dialect):
-    delimiter = ";"
-    quotechar = '"'
-    doublequote = True
-    skipinitialspace = True
-    lineterminator = "\r\n"
-    quoting = csv.QUOTE_MINIMAL
+csv.register_dialect(DIALECT_NAME, delimiter=";")
 
 
 class DepositAccountImporter(Importer):
@@ -29,7 +24,7 @@ class DepositAccountImporter(Importer):
     """
 
     # Configure csvbase options
-    dialect = CsvDialect
+    dialect = DIALECT_NAME
     encoding = "utf-8-sig"  # Handle BOM if present
 
     # CSV file has a header line
