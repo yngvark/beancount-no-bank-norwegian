@@ -10,6 +10,14 @@ from beancount.core.amount import Amount
 from beangulp import extract, similar, utils
 
 
+class CsvDialect(csv.Dialect):
+    delimiter = ';'
+    quotechar = '"'
+    doublequote = True
+    skipinitialspace = True
+    lineterminator = '\r\n'
+    quoting = csv.QUOTE_MINIMAL
+
 
 class DepositAccountImporter(Importer):
     """Importer for SpareBank 1 deposit account CSV statements using csvbase.
@@ -19,17 +27,8 @@ class DepositAccountImporter(Importer):
     transactions based on their descriptions.
     """
 
-    # Define a custom dialect for Norwegian CSV format
-    class NorwegianDialect(csv.Dialect):
-        delimiter = ';'
-        quotechar = '"'
-        doublequote = True
-        skipinitialspace = True
-        lineterminator = '\r\n'
-        quoting = csv.QUOTE_MINIMAL
-
     # Configure csvbase options
-    dialect = NorwegianDialect
+    dialect = CsvDialect
     encoding = 'utf-8-sig'  # Handle BOM if present
 
     # CSV file has a header line
