@@ -7,7 +7,8 @@ from typing import Optional, Sequence, Tuple, Dict, Any, List
 
 from beancount.core import data
 from beancount.core.amount import Amount
-from beangulp import extract, similar
+from beangulp import extract, similar, utils
+
 
 
 class DepositAccountImporter(Importer):
@@ -55,12 +56,13 @@ class DepositAccountImporter(Importer):
 
     def identify(self, filepath: str) -> bool:
         """Identify if the file is a SpareBank 1 CSV statement."""
-        try:
-            with open(filepath, encoding=self.encoding) as fd:
-                header_line = fd.readline().strip()
-                return header_line == "Dato;Beskrivelse;Rentedato;Inn;Ut;Til konto;Fra konto;"
-        except:
+        if not utils.is_mimetype(filepath, 'text/csv'):
             return False
+        return utils.search_file_regexp(
+            filepath,
+            "Dato;Beskrivelse;Rentedato;Inn;Ut;Til konto;Fra konto",
+            encoding=self.encoding
+        )
 
     def filename(self, filepath: str) -> str:
         """Generate a meaningful filename."""
