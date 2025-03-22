@@ -18,12 +18,15 @@ format:
 fix:
     ruff check --fix {{path}}
 
+isort:
+    ruff check --select I --fix
+
 # Show all warnings, even ones that are ignored by default
 check-all:
     ruff check --select ALL {{path}}
 
 # Runs both check and format
-all: check format
+all: check isort format
     @echo "Both check and format completed"
 
 # Display ruff version
