@@ -1,13 +1,13 @@
-from beangulp.importers.csvbase import Importer, Column, Date, CreditOrDebit
 import csv
 import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Optional, Sequence, Tuple, Dict, Any, List
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from beancount.core import data
 from beancount.core.amount import Amount
 from beangulp import extract, similar, utils
+from beangulp.importers.csvbase import Column, CreditOrDebit, Date, Importer
 
 DIALECT_NAME = "sparebank1"
 
