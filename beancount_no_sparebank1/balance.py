@@ -15,9 +15,8 @@ from beangulp.importer import Importer
 
 class PDFStatementImporter(Importer):
     """
-    Importer for Norwegian bank account PDF statements.
-
-    This importer processes PDF statements from Norwegian banks,
+    Importer for SpareBank 1 PDF bank statements.
+    This importer processes PDF statements from SpareBank 1 in Norway,
     extracting the statement's end date and balance to create
     exactly one balance assertion per statement. The balance date
     is set to the day after the statement end date, as Beancount
@@ -66,7 +65,8 @@ class PDFStatementImporter(Importer):
         Returns:
             True if the file is a matching PDF, False otherwise.
         """
-        if not utils.is_mimetype(filepath, "application/pdf"):
+        path = Path(filepath)
+        if not utils.is_mimetype(path, "application/pdf"):
             return False
 
         # Check for Norwegian bank statement indicators
@@ -77,16 +77,12 @@ class PDFStatementImporter(Importer):
         ]
 
         try:
-            with open(filepath, 'rb') as f:
+            with path.open('rb') as f:
                 pdf = pypdf.PdfReader(f)
-                if len(pdf.pages) == 0:
-                    return False
-
-                # Extract text from first page
-                text = pdf.pages[0].extract_text()
-
-                # Check if any of the patterns match
-                return any(re.search(pattern, text) for pattern in norwegian_patterns)
+                return len(pdf.pages) > 0 and any(
+                    re.search(pattern, pdf.pages[0].extract_text())
+                    for pattern in norwegian_patterns
+                )
         except Exception as e:
             self.logger.debug(f"Error identifying file {filepath}: {str(e)}")
             return False

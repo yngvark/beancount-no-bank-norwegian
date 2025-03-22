@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "beangulp",
+    "pypdf>=5.4.0",
 ]
 
 [tool.uv.sources]
