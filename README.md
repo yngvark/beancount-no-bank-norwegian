@@ -2,6 +2,9 @@
 
 A Python library for importing SpareBank 1 (Norway) bank data into Beancount accounting format.
 
+![sb12](https://github.com/user-attachments/assets/e0e90691-1430-4bd1-a29d-e1605e30b857)
+
+
 ## Features
 
 - Import transactions from CSV exports of SpareBank 1 deposit accounts
