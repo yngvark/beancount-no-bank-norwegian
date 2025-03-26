@@ -1,6 +1,6 @@
 # Justfile for ruff linting and formatting
 
-path := "beancount_no_sparebank1"
+path := "src/beancount_no_sparebank1"
 
 # Default recipe to run when just is called without arguments
 default:
