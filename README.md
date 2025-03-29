@@ -1,6 +1,6 @@
 # beancount-no-sparebank1
 
-A Python library that imports Norwegian SpareBank 1 data into Beancount accounting format.
+A Python library that imports Bank Norwegian data into Beancount accounting format.
 
 ![sb12](https://github.com/user-attachments/assets/e0e90691-1430-4bd1-a29d-e1605e30b857)
 
@@ -58,4 +58,3 @@ if __name__ == '__main__':
 
 - [Automatically balancing Beancount DKB transactions](https://sgoel.dev/posts/automatically-balancing-beancount-dkb-transactions/)
 - [siddhantgoel/beancount-dkb](https://github.com/siddhantgoel/beancount-dkb)
-

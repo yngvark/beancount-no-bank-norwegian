@@ -29,6 +29,7 @@ wheels = [
 
 [[package]]
 name = "beancount-no-sparebank1"
+version = "0.0.0"  # Add this line
 source = { editable = "." }
 dependencies = [
     { name = "beangulp" },
