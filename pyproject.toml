@@ -1,7 +1,7 @@
 [project]
-name = "beancount-no-sparebank1"
+name = "beancount-no-banknorwegian"
 dynamic = ["version"]
-description = "A library that converts financial data from SpareBank 1 into structured Beancount accounting format."
+description = "A library that converts financial data from Bank Norwegian into structured Beancount accounting format."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -20,10 +20,10 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-packages = ["src/beancount_no_sparebank1"]
+packages = ["src/beancount_no_banknorwegian"]
 
 [tool.hatch.version]
-path = "src/beancount_no_sparebank1/version.py"
+path = "src/beancount_no_banknorwegian/version.py"
 
 [project.scripts]
-beancount-no-sparebank1 = "beancount_no_sparebank1.deposit:main"
+beancount-no-banknorwegian = "beancount_no_banknorwegian.deposit:main"
