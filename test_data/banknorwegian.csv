@@ -1,0 +1,8 @@
+TransactionDate,Text,Type,Currency Amount,Currency Rate,Currency,Amount,Merchant Area,Merchant Category,BookDate,ValueDate
+1/1/2022,HELLO GOLFKLUBB,Kjøp,-100,1,NOK,-100,OSLO         ,"Membership Clubs (Sports, Recreation",4/1/2023,1/1/2022
+1/2/2022,OTHER GOLFKLUBB,Kjøp,-150,1,NOK,-150,OSLO         ,"Membership Clubs (Sports, Recreation",4/2/2023,1/2/2022
+2/3/2022,VOISCOOTERS,Kjøp,-23.78,1,NOK,-23.78,OSLO         ,"Transportation Services, Not elsewhe",4/1/2023,2/3/2022
+2/3/2022,SOMEOTHERSCOOTERS,Kjøp,-35.96,1,NOK,-35.96,OSLO         ,Local/Suburban Commuter Passenger Tr,4/1/2023,2/3/2022
+3/10/2022,Vipps*Ruter,Kjøp,-39,1,NOK,-39,OSLO         ,"Transportation Services, Not elsewhe",4/1/2023,3/10/2022
+3/10/2022,Fra 123456789012,Innbetaling,10000,10000,NOK,41111,OSLO         ,,4/3/2023,3/10/2022
+4/3/2023,HELLOSHOP.NO,CreditVoucher,388.95,1,NOK,388.95,OSLO,Family Clothing Stores,4/4/2023,4/4/2023

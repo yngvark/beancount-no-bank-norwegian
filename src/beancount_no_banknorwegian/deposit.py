@@ -5,20 +5,22 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from beancount.core import data
-from beancount.core.amount import Amount
+from beancount.core.amount import Amount as BeanAmount
 from beangulp import extract, similar, utils
-from beangulp.importers.csvbase import Column, CreditOrDebit, Date, Importer
+from beangulp.importers.csvbase import Column, CreditOrDebit, Date, Importer, Amount
 
-DIALECT_NAME = "sparebank1"
+from beangulp.testing import main as test_main
 
-csv.register_dialect(DIALECT_NAME, delimiter=";")
+DIALECT_NAME = "banknorwegian"
+
+csv.register_dialect(DIALECT_NAME, delimiter=",")
 
 
 class DepositAccountImporter(Importer):
     """
-    Importer for SpareBank 1 deposit account CSV statements.
+    Importer for Bank Norwegian deposit account CSV statements.
 
-    This importer processes CSV statements from SpareBank 1 in Norway, handling
+    This importer processes CSV statements from Bank Norwegian in Norway, handling
     Norwegian date and decimal formats, and categorizing transactions based on
     narration patterns.
     """
@@ -31,22 +33,24 @@ class DepositAccountImporter(Importer):
     names = True
 
     # Configure column mappings
-    date = Date("Dato", "%d.%m.%Y")  # Norwegian date format
-    narration = Column("Beskrivelse")
+    date = Date("TransactionDate", "%d/%m/%Y")  # Norwegian date format
+    narration = Column("Text")
 
-    amount = CreditOrDebit(
+    # Type indicates transaction type (Kjøp, Innbetaling, CreditVoucher, etc.)
+    type = Column("Type")
+
+    amount = Amount("Amount",
         subs={
-            ",": ".",   # Convert decimal separator
-            "-": ""     # Remove negative signs
-        },
-        credit="Inn",   # Values in this column are KEPT AS-IS
-        debit="Ut"      # Values in this column are NEGATED
+            ",": "."   # Convert decimal separator if needed
+        }
     )
 
-    # Map the metadata fields
-    rentedato = Column("Rentedato")
-    til_konto = Column("Til konto")
-    fra_konto = Column("Fra konto")
+    # Additional metadata fields
+    currency = Column("Currency")
+    merchant_area = Column("Merchant Area")
+    merchant_category = Column("Merchant Category")
+    book_date = Column("BookDate")
+    value_date = Column("ValueDate")
 
     def __init__(
         self,
@@ -61,10 +65,10 @@ class DepositAccountImporter(Importer):
         flag: str = "*",
     ):
         """
-        Initialize a SpareBank 1 importer.
+        Initialize a Bank Norwegian importer.
 
         Args:
-            account_name: The Beancount account name (e.g., "Assets:Bank:SpareBank1").
+            account_name: The Beancount account name (e.g., "Assets:Bank:BankNorwegian").
             currency: The currency of the account (default: "NOK").
             narration_to_account_mappings: Optional list of (pattern, account) tuples
                 to map narration patterns to accounts for categorization.
@@ -88,7 +92,7 @@ class DepositAccountImporter(Importer):
 
     def identify(self, filepath: str) -> bool:
         """
-        Identify if the file is a SpareBank 1 CSV statement.
+        Identify if the file is a Bank Norwegian CSV statement.
 
         Args:
             filepath: Path to the file to check.
@@ -101,7 +105,7 @@ class DepositAccountImporter(Importer):
             return False
         return utils.search_file_regexp(
             filepath,
-            "Dato;Beskrivelse;Rentedato;Inn;Ut;Til konto;Fra konto",
+            "TransactionDate,Text,Type,Currency Amount,Currency Rate,Currency,Amount,Merchant Area,Merchant Category,BookDate,ValueDate",
             encoding=self.encoding,
         )
 
@@ -115,7 +119,7 @@ class DepositAccountImporter(Importer):
         Returns:
             A string with account name and original filename.
         """
-        return f"sparebank1.{Path(filepath).name}"
+        return f"banknorwegian.{Path(filepath).name}"
 
     def deduplicate(
         self, entries: List[data.Directive], existing: List[data.Directive]
@@ -150,25 +154,31 @@ class DepositAccountImporter(Importer):
 
         meta = super().metadata(filepath, lineno, row)
 
-        meta["rentedato"] = getattr(row, "rentedato", "")
-        meta["to_account"] = getattr(row, "til_konto", "")
-        meta["from_account"] = getattr(row, "fra_konto", "")
+        # Add additional metadata fields from the CSV
+        meta["type"] = getattr(row, "type", "")
+        meta["currency"] = getattr(row, "currency", "")
+        meta["merchant_area"] = getattr(row, "merchant_area", "")
+        meta["merchant_category"] = getattr(row, "merchant_category", "")
+        meta["book_date"] = getattr(row, "book_date", "")
+        meta["value_date"] = getattr(row, "value_date", "")
 
-        # Filter out None values to keep metadata clean
+        # Filter out empty values to keep metadata clean
         return {k: v for k, v in meta.items() if v != ""}
 
     def finalize(self, txn: data.Transaction, row: Any) -> Optional[data.Transaction]:
         """
-        Post-process the transaction with categorization based on narration,
-        from_account, or to_account.
+        Post-process the transaction with categorization based on transaction type,
+        narration patterns, and account mappings.
+
+        Transaction types:
+        - "Kjøp" (Purchase): Negative amount, categorize by narration
+        - "Innbetaling" (Deposit): Positive amount, often from another account
+        - "CreditVoucher" (Refund/Credit): Positive amount, categorize by narration
 
         Mapping precedence:
         1. Narration patterns are checked first
-        2. From account patterns are checked second
-        3. To account patterns are checked last
-
-        Only the first matching pattern in each category is applied. Once a match
-        is found in any category, the categorization stops and that account is used.
+        2. From account patterns for deposits
+        3. Default categorization based on transaction type
 
         Args:
             txn: The transaction object to finalize.
@@ -180,52 +190,62 @@ class DepositAccountImporter(Importer):
         if not txn.postings:
             return txn  # No changes if no postings
 
+        # Get transaction type
+        transaction_type = getattr(row, "type", "")
+
         # Check narration patterns first (highest precedence)
         for pattern, account in self.narration_to_account_mappings:
             if pattern in txn.narration:
-                opposite_units = Amount(-txn.postings[0].units.number, self.currency)
+                opposite_units = BeanAmount(-txn.postings[0].units.number, self.currency)
                 balancing_posting = data.Posting(
                     account, opposite_units, None, None, None, None
                 )
-                # Return immediately on first match
                 return txn._replace(postings=txn.postings + [balancing_posting])
-                
-        # Check from_account patterns second (medium precedence)
-        from_account = getattr(row, "fra_konto", "")
-        if from_account:
+
+        # Special handling for deposit ("Innbetaling") transactions
+        if transaction_type == "Innbetaling":
+            # Check from_account mappings for deposits
             for pattern, account in self.from_account_mappings:
-                if pattern in from_account:
-                    opposite_units = Amount(-txn.postings[0].units.number, self.currency)
+                if pattern in txn.narration:
+                    opposite_units = BeanAmount(-txn.postings[0].units.number, self.currency)
                     balancing_posting = data.Posting(
                         account, opposite_units, None, None, None, None
                     )
-                    # Return immediately on first match
                     return txn._replace(postings=txn.postings + [balancing_posting])
-        
-        # Check to_account patterns last (lowest precedence)
-        to_account = getattr(row, "til_konto", "")
-        if to_account:
-            for pattern, account in self.to_account_mappings:
-                if pattern in to_account:
-                    opposite_units = Amount(-txn.postings[0].units.number, self.currency)
-                    balancing_posting = data.Posting(
-                        account, opposite_units, None, None, None, None
-                    )
-                    # Return immediately on first match
-                    return txn._replace(postings=txn.postings + [balancing_posting])
-                    
-        # If no patterns matched, return unchanged transaction
-        return txn
+
+            # Default deposit categorization if no mapping found
+            opposite_units = BeanAmount(-txn.postings[0].units.number, self.currency)
+            balancing_posting = data.Posting(
+                "Income:Unknown", opposite_units, None, None, None, None
+            )
+            return txn._replace(postings=txn.postings + [balancing_posting])
+
+        # Special handling for refunds/credits ("CreditVoucher")
+        elif transaction_type == "CreditVoucher":
+            # Refunds usually go to expenses accounts
+            opposite_units = BeanAmount(-txn.postings[0].units.number, self.currency)
+            balancing_posting = data.Posting(
+                "Expenses:Refunds", opposite_units, None, None, None, None
+            )
+            return txn._replace(postings=txn.postings + [balancing_posting])
+
+        # Default for purchases ("Kjøp") and other types
+        else:
+            # Default to uncategorized expenses
+            opposite_units = BeanAmount(-txn.postings[0].units.number, self.currency)
+            balancing_posting = data.Posting(
+                "Expenses:Uncategorized", opposite_units, None, None, None, None
+            )
+            return txn._replace(postings=txn.postings + [balancing_posting])
 
 
-from beangulp.testing import main as test_main
 
 
 def main():
     """Entry point for the command-line interface."""
     # This enables the testing CLI commands
     test_main(DepositAccountImporter(
-        'Assets:Bank:SpareBank1:Checking',
+        'Assets:Bank:BankNorwegian:Checking',
         narration_to_account_mappings=[
             ('KIWI', 'Expenses:Groceries'),
             ('MENY', 'Expenses:Groceries'),
@@ -240,13 +260,13 @@ def main():
             ('SKATTEETATEN', 'Income:Government:TaxReturn'),
             ('Lønn', 'Income:Salary'),
             ('OBS BYGG', 'Expenses:HomeImprovement'),
-            ('Overføring', 'Assets:Bank:SpareBank1:Transfer'),
+            ('Overføring', 'Assets:Bank:BankNorwegian:Transfer'),
         ],
         from_account_mappings=[
-            ('12345678901', 'Assets:Bank:SpareBank1:Checking')
+            ('12345678901', 'Assets:Bank:BankNorwegian:Checking')
         ],
         to_account_mappings=[
-            ('98712345678', 'Assets:Bank:SpareBank1:Savings')
+            ('98712345678', 'Assets:Bank:BankNorwegian:Savings')
         ]
     ))
 

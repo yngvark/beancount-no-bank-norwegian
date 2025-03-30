@@ -3,7 +3,7 @@ import beancount_no_banknorwegian
 
 importers = [
     beancount_no_banknorwegian.deposit.DepositAccountImporter(
-        'Assets:Bank:SpareBank1:Checking',
+        'Assets:Bank:BankNorwegian:Checking',
         currency='NOK',
         narration_to_account_mappings=[
             ('KIWI', 'Expenses:Groceries'),
@@ -19,17 +19,17 @@ importers = [
             ('SKATTEETATEN', 'Income:Government:TaxReturn'),
             ('Lønn', 'Income:Salary'),
             ('OBS BYGG', 'Expenses:HomeImprovement'),
-            ('Overføring', 'Assets:Bank:SpareBank1:Transfer'),
+            ('Overføring', 'Assets:Bank:BankNorwegian:Transfer'),
         ],
         from_account_mappings=[
-            ('12345678901', 'Assets:Bank:SpareBank1:Checking')
+            ('12345678901', 'Assets:Bank:BankNorwegian:Checking')
         ],
         to_account_mappings=[
-            ('98712345678', 'Assets:Bank:SpareBank1:Savings')
+            ('98712345678', 'Assets:Bank:BankNorwegian:Savings')
         ]
     ),
     beancount_no_banknorwegian.balance.PDFStatementImporter(
-        'Assets:Bank:SpareBank1:Checking',
+        'Assets:Bank:BankNorwegian:Checking',
         currency='NOK'
     ),
 ]
