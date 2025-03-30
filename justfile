@@ -26,7 +26,8 @@ check-all:
     ruff check --select ALL {{path}}
 
 test:
-    uv run beancount-no-sparebank1 test test_data
+    #uv run beancount-no-sparebank1 test test_data
+    uv run quicktest.py extract test_data/banknorwegian.csv > test_data/banknorwegian_data.csv.beancount
 
 test-gen:
     uv run beancount-no-sparebank1 generate test_data
@@ -38,3 +39,6 @@ all: check isort format
 # Display ruff version
 version:
     ruff --version
+
+fava:
+    fava -p 3000 test_data/banknorwegian.csv.beancount

@@ -1,0 +1,19 @@
+;; -*- mode: beancount -*-
+
+plugin "beancount.plugins.auto_accounts"
+;;1980-05-12 open Assets:Bank:BankNorwegian:Checking
+;;1980-05-12 open Expenses:Uncategorized
+;;1980-05-12 open Expenses:Refunds
+;;1980-05-12 open Income:Unknown
+
+option "operating_currency" "NOK"
+
+2022-01-01 * "HELLO GOLFKLUBB"
+  type: "Kjøp"
+  currency: "NOK"
+  merchant_area: "OSLO"
+  merchant_category: "Membership Clubs (Sports, Recreation"
+  book_date: "4/1/2023"
+  value_date: "1/1/2022"
+  Assets:Bank:BankNorwegian:Checking  -100 NOK
+  Expenses:Uncategorized               100 NOK

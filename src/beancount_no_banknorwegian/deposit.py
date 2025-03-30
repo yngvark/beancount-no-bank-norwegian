@@ -238,9 +238,6 @@ class DepositAccountImporter(Importer):
             )
             return txn._replace(postings=txn.postings + [balancing_posting])
 
-
-
-
 def main():
     """Entry point for the command-line interface."""
     # This enables the testing CLI commands

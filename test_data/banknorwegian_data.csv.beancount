@@ -1,0 +1,70 @@
+;; -*- mode: beancount -*-
+
+2022-01-01 * "HELLO GOLFKLUBB"
+  type: "Kjøp"
+  currency: "NOK"
+  merchant_area: "OSLO"
+  merchant_category: "Membership Clubs (Sports, Recreation"
+  book_date: "4/1/2023"
+  value_date: "1/1/2022"
+  Assets:Bank:BankNorwegian:Checking  -100 NOK
+  Expenses:Uncategorized               100 NOK
+
+2022-02-01 * "OTHER GOLFKLUBB"
+  type: "Kjøp"
+  currency: "NOK"
+  merchant_area: "OSLO"
+  merchant_category: "Membership Clubs (Sports, Recreation"
+  book_date: "4/2/2023"
+  value_date: "1/2/2022"
+  Assets:Bank:BankNorwegian:Checking  -150 NOK
+  Expenses:Uncategorized               150 NOK
+
+2022-03-02 * "VOISCOOTERS"
+  type: "Kjøp"
+  currency: "NOK"
+  merchant_area: "OSLO"
+  merchant_category: "Transportation Services, Not elsewhe"
+  book_date: "4/1/2023"
+  value_date: "2/3/2022"
+  Assets:Bank:BankNorwegian:Checking  -23.78 NOK
+  Expenses:Uncategorized               23.78 NOK
+
+2022-03-02 * "SOMEOTHERSCOOTERS"
+  type: "Kjøp"
+  currency: "NOK"
+  merchant_area: "OSLO"
+  merchant_category: "Local/Suburban Commuter Passenger Tr"
+  book_date: "4/1/2023"
+  value_date: "2/3/2022"
+  Assets:Bank:BankNorwegian:Checking  -35.96 NOK
+  Expenses:Uncategorized               35.96 NOK
+
+2022-10-03 * "Vipps*Ruter"
+  type: "Kjøp"
+  currency: "NOK"
+  merchant_area: "OSLO"
+  merchant_category: "Transportation Services, Not elsewhe"
+  book_date: "4/1/2023"
+  value_date: "3/10/2022"
+  Assets:Bank:BankNorwegian:Checking  -39 NOK
+  Expenses:Uncategorized               39 NOK
+
+2022-10-03 * "Fra 123456789012"
+  type: "Innbetaling"
+  currency: "NOK"
+  merchant_area: "OSLO"
+  book_date: "4/3/2023"
+  value_date: "3/10/2022"
+  Assets:Bank:BankNorwegian:Checking   41111 NOK
+  Assets:Bank:BankNorwegian:Checking  -41111 NOK
+
+2023-03-04 * "HELLOSHOP.NO"
+  type: "CreditVoucher"
+  currency: "NOK"
+  merchant_area: "OSLO"
+  merchant_category: "Family Clothing Stores"
+  book_date: "4/4/2023"
+  value_date: "4/4/2023"
+  Assets:Bank:BankNorwegian:Checking   388.95 NOK
+  Expenses:Refunds                    -388.95 NOK

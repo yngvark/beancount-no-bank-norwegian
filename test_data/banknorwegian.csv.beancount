@@ -1,0 +1,5 @@
+plugin "beancount.plugins.auto_accounts"
+option "operating_currency" "NOK"
+
+; Then include your imported file
+include "banknorwegian_data.csv.beancount"
